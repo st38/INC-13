@@ -1,0 +1,68 @@
+---
+- name: include vars
+  include_vars:
+    file: "{{ item }}"
+  with_items:
+    - ../awseip/vars/main.yml
+    - ../postgresql/vars/main.yml
+
+- name: register aws eip variables
+  set_fact:
+    elastic_ip: "{{ lookup('env','ELASTIC_IP') }}"
+    allocation_id: "{{ lookup('env','ALLOCATION_ID') }}"
+    aws_default_region: "{{ lookup('env','AWS_DEFAULT_REGION') }}"
+
+- name: register aws eip variables
+  set_fact:
+    elastic_ip_public_dns: ec2-{{ elastic_ip | replace(".", "-") }}.{{ aws_default_region }}.compute.amazonaws.com
+
+- name: stop postgresql on both hosts
+  service: name=postgresql state=stopped
+  become: true
+
+- name: disable postgresql auto start
+  lineinfile:
+    dest: "{{ pg_config_path }}/{{ pg_version }}/{{ pg_cluster }}/start.conf"
+    regexp: '^auto$'
+    line: 'disabled'
+    state: present
+  become: true
+
+- name: remove recovery file on slave postgresql host
+  file:
+    state: absent
+    path: "{{ pg_data_path }}/{{ pg_version }}/{{ pg_cluster }}/recovery.conf"
+  become: true
+  when: "'postgresql-slave' in group_names" 
+
+- name: create temp directory for pgsql ocf
+  file:
+    path: "{{ pg_data_path }}/{{ pg_version }}/tmp"
+    state: directory
+    owner: "{{ pg_user }}"
+    group: "{{ pg_group }}"
+    mode: 0640
+  become: true
+
+- name: copy cib config file to the master host
+  template:
+    src: cib.txt.j2
+    dest: /tmp/cib.txt
+  when: "'cluster-master' in group_names"
+
+- name: import pacemaker configuration
+  shell: crm configure load update /tmp/cib.txt
+  become: true
+  when: "'cluster-master' in group_names"
+
+- name: remove temporary file of pacemaker configureation
+  file:
+    path: /tmp/cib.txt
+    state: absent
+  when: "'cluster-master' in group_names"
+
+# - name: restart pacemaker service
+  # service:
+    # name: pacemaker
+    # state: restarted
+  # become: true

@@ -1,0 +1,33 @@
+totem {
+  version: 2
+  cluster_name: pg-ha-cluster
+  transport: udpu
+  interface {
+    ringnumber: 0
+    bindnetaddr: {{ ansible_eth0.ipv4.address }}
+    broadcast: yes
+    mcastport: 5405
+  }
+}
+quorum {
+  provider: corosync_votequorum
+  two_node: 1
+}
+nodelist {
+  node {
+    ring0_addr: {{ hostvars[groups['cluster-master'][0]]['ansible_eth0']['ipv4']['address'] }}
+    name: {{ hostvars[groups['postgresql-master'][0]]['ansible_hostname'] }}
+    nodeid: 1
+  }
+  node {
+    ring0_addr: {{ hostvars[groups['cluster-slave'][0]]['ansible_eth0']['ipv4']['address'] }}
+    name: {{ hostvars[groups['postgresql-slave'][0]]['ansible_hostname'] }}
+    nodeid: 2
+  }
+}
+logging {
+  to_logfile: yes
+  logfile: /var/log/corosync/corosync.log
+  to_syslog: yes
+  timestamp: on
+}

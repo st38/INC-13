@@ -1,0 +1,42 @@
+property \
+    no-quorum-policy="ignore" \
+    stonith-enabled="false" \
+    crmd-transition-delay="0s"
+rsc_defaults \
+    resource-stickiness="INFINITY" \
+    migration-threshold="1"
+primitive vip ocf:aws:ec2-eip \
+        params awscli={{ aws_cli }} elastic_ip={{ elastic_ip }} allocation_id={{ allocation_id }} \
+        meta allow-migrate=true \
+    op monitor timeout=30s interval=30s depth=0 \
+    op start timeout=30s interval=0 \
+    op stop timeout=30s interval=0
+primitive pgsql ocf:heartbeat:pgsql \
+   params \
+        pgctl="{{ pg_bin_path }}/{{ pg_version }}/bin/pg_ctl" \
+        psql="{{ pg_bin_path }}/{{ pg_version }}/bin/psql" \
+        pgdata="{{ pg_data_path }}/{{ pg_version }}/{{ pg_cluster }}/" \
+        start_opt="-p {{ pg_port }}" \
+        config="{{ pg_config_path }}/{{ pg_version }}/{{ pg_cluster }}/postgresql.conf" \
+        logfile="{{ pg_log_path }}/postgresql-{{ pg_version }}-{{ pg_cluster }}.log" \
+        rep_mode="sync" \
+        node_list="{{ groups['postgresql']|join(' ') }}" \
+        restore_command="test -f {{ pg_data_path }}/{{ pg_version }}/{{ pg_wal_folder }}/%f && cp {{ pg_data_path }}/{{ pg_version }}/{{ pg_wal_folder}}/%f %p" \
+        primary_conninfo_opt="keepalives_idle=60 keepalives_interval=5 keepalives_count=5" \
+        master_ip="{{ elastic_ip_public_dns }}" \
+        restart_on_promote="true" \
+        stop_escalate="0" \
+        socketdir="{{ pg_socket_path }}" \
+        tmpdir="{{ pg_data_path }}/{{ pg_version }}/tmp" \
+    op start   interval="0s" timeout="60s" on-fail="restart" \
+    op monitor interval="4s" timeout="60s" on-fail="restart" \
+    op monitor interval="3s" timeout="60s" on-fail="restart" role="Master" \
+    op promote interval="0s" timeout="60s" on-fail="restart" \
+    op demote  interval="0s" timeout="60s" on-fail="stop" \
+    op stop    interval="0s" timeout="60s" on-fail="block" \
+    op notify  interval="0s" timeout="60s"
+ms msPostgresql pgsql \
+    meta master-max="1" master-node-max="1" clone-max="2" clone-node-max="1" notify="true" interleave="true" target-role="Started"
+colocation rsc_colocation-1 inf: msPostgresql:Master vip
+order rsc_order-1 0: msPostgresql:promote  vip:start   sequential=true symmetrical=false
+order rsc_order-2 0: msPostgresql:demote   vip:stop    sequential=true symmetrical=false

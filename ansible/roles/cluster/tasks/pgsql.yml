@@ -1,0 +1,9 @@
+---
+- name: get ltest pgsql ocf resource agent
+  get_url:
+    url: https://raw.githubusercontent.com/ClusterLabs/resource-agents/master/heartbeat/pgsql
+    dest: /usr/lib/ocf/resource.d/heartbeat/pgsql
+    backup: yes
+    force: yes
+    mode: 0766
+  become: true

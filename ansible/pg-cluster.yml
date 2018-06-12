@@ -1,0 +1,26 @@
+---
+- name: initial configuration
+  hosts: all
+  gather_facts: false
+  roles:
+    - role: initial
+
+- name: common configuration
+  hosts: all
+  roles:
+    - role: common
+
+- name: deploy postgresql
+  hosts: postgresql
+  roles:
+    - role: postgresql
+
+- name: deploy aws eip
+  hosts: postgresql
+  roles:
+    - role: awseip
+
+- name: deploy cluster software
+  hosts: postgresql
+  roles:
+    - role: cluster

@@ -1,0 +1,16 @@
+# REPLICATION AND ARCHIVING #
+listen_addresses = '*'
+log_line_prefix = '%t [%p] %u@%d '
+wal_level = hot_standby
+archive_mode = on
+archive_command = 'test ! -f {{ pg_data_path }}/{{ pg_version }}/{{ pg_wal_folder }}/%f && cp %p {{ pg_data_path }}/{{ pg_version }}/{{ pg_wal_folder }}/%f'
+max_wal_senders = 5
+wal_keep_segments = 32
+hot_standby = on
+hot_standby_feedback = on
+wal_sender_timeout = 5000
+wal_receiver_status_interval = 2
+max_standby_streaming_delay = -1
+max_standby_archive_delay = -1
+synchronous_commit = on
+restart_after_crash = off

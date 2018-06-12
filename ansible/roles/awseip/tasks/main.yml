@@ -1,0 +1,38 @@
+---
+- name: install pip
+  apt: pkg=python-pip state=present update_cache=yes
+  become: true
+
+- name: install awscli
+  pip: name={{ item }} state=latest
+  with_items:
+    - pip
+    - awscli
+  become: true
+
+- name: create folder for aws cli credentials
+  file:
+    path: /root/.aws
+    state: directory
+    owner: root
+    group: root
+    mode: 0700
+  become: true
+
+- name: copy aws cli config
+  template:
+    src: config.j2
+    dest: /root/.aws/config
+    owner: root
+    group: root
+    mode: 0600
+  become: true
+
+- name: copy aws cli credentials
+  template:
+    src: credentials.j2
+    dest: /root/.aws/credentials
+    owner: root
+    group: root
+    mode: 0600
+  become: true

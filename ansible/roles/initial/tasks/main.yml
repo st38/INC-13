@@ -1,0 +1,5 @@
+---
+- name: install python2
+  raw: sudo apt-get -y install python-simplejson
+  changed_when: false
+  become: true

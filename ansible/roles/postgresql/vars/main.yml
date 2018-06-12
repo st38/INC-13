@@ -1,0 +1,14 @@
+---
+pg_version: 9.6
+pg_bin_path: /usr/lib/postgresql
+pg_config_path: /etc/postgresql
+pg_data_path: /var/lib/postgresql
+pg_socket_path: /var/run/postgresql
+pg_log_path: /var/log/postgresql
+pg_wal_folder: wal_archive
+pg_cluster: main
+pg_port: 5432
+pg_user: postgres
+pg_group: postgres
+pg_replication_user_name: replicator
+pg_custom_config: postgresql_custom.conf

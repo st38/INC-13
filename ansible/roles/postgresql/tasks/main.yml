@@ -1,0 +1,142 @@
+---
+- name: register postgresql variables
+  set_fact:
+    pg_replication_user_password: "{{ lookup('env','PG_REPLICATION_USER_PASSWORD') }}"
+    pg_subnet: "{{ lookup('env','CIDR_BLOCK') }}"
+    pg_cusrom_user_name: "{{ lookup('env','PG_CUSTOM_USER_NAME') }}"
+    pg_cusrom_user_password: "{{ lookup('env','PG_CUSTOM_USER_PASSWORD') }}"
+
+- name: register aws eip variables
+  set_fact:
+    elastic_ip: "{{ lookup('env','ELASTIC_IP') }}"
+    aws_default_region: "{{ lookup('env','AWS_DEFAULT_REGION') }}"
+
+- name: register aws eip variables
+  set_fact:
+    elastic_ip_public_dns: ec2-{{ elastic_ip | replace(".", "-") }}.{{ aws_default_region }}.compute.amazonaws.com
+
+- name: add postgresql repository into source list using separate file
+  apt_repository:
+    repo: deb http://apt.postgresql.org/pub/repos/apt/ xenial-pgdg main
+    state: present
+    filename: pgdg.list
+  become: true
+
+- name: add postgresql repository key
+  apt_key:
+    url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+    state: present 
+  become: true
+
+- name: install apt packages
+  apt: pkg={{ item }} update_cache=yes
+  with_items:
+    - postgresql-{{ pg_version }}
+    - postgresql-contrib-{{ pg_version }}
+    - libpq-dev
+    - python-psycopg2
+  become: true
+
+- name: creates directory for wal
+  file:
+    path: "{{ pg_data_path }}/{{ pg_version }}/{{ pg_wal_folder }}"
+    state: directory
+    owner: "{{ pg_user }}"
+    group: "{{ pg_group }}"
+    mode: 0700
+  become: true
+
+- name: copy custom configuration file
+  template:
+    src: "{{ pg_custom_config }}.j2"
+    dest: "{{ pg_config_path }}/{{ pg_version }}/{{ pg_cluster }}/{{ pg_custom_config }}"
+    owner: "{{ pg_user }}"
+    group: "{{ pg_group }}"
+    mode: 0644
+  become: true
+
+- name: include custom configuration file in main file
+  lineinfile:
+    path: "{{ pg_config_path }}/{{ pg_version }}/{{ pg_cluster }}/postgresql.conf"
+    line: "include_if_exists = '{{ pg_custom_config }}'	# include file only if it exists"
+  become: true
+
+- name: copy client authentication configuration file
+  template:
+    src: pg_hba.conf.j2
+    dest: "{{ pg_config_path }}/{{ pg_version }}/{{ pg_cluster }}/pg_hba.conf"
+    owner: "{{ pg_user }}"
+    group: "{{ pg_group }}"
+    mode: 0644
+  become: true
+
+- name: create postgresql user for replication on master host
+  postgresql_user:
+    name: "{{ pg_replication_user_name }}"
+    password: "{{ pg_replication_user_password }}"
+    role_attr_flags: LOGIN,REPLICATION
+  become: true
+  become_user: "{{ pg_user }}"
+  when: "'postgresql-master' in group_names"
+
+- name: create postgresql custom user
+  postgresql_user:
+    name: "{{ pg_cusrom_user_name }}"
+    password: "{{ pg_cusrom_user_password }}"
+    role_attr_flags: LOGIN,SUPERUSER
+  become: true
+  become_user: "{{ pg_user }}"
+  when: "'postgresql-master' in group_names"
+
+- name: restart postgresql on master host
+  service: name=postgresql state=restarted
+  become: true
+  when: "'postgresql-master' in group_names"
+
+- name: wait 10 seconds after restart postgresql on master host
+  pause:
+    seconds: 10
+
+- name: stop postgresql on slave host
+  service: name=postgresql state=stopped
+  become: true
+  when: "'postgresql-slave' in group_names"
+
+- name: remove postgres cluster directory on slave host
+  file:
+    state: "{{ item }}"
+    path: "{{ pg_data_path }}/{{ pg_version }}/{{ pg_cluster }}/"
+    owner: "{{ pg_user }}"
+    group: "{{ pg_user }}"
+    mode: 0700
+  with_items:
+    - absent
+    - directory
+  become: true
+  when: "'postgresql-slave' in group_names"
+
+- name: initial sync database on slave from master
+  shell: pg_basebackup -h {{ elastic_ip_public_dns }} -D {{ pg_data_path }}/{{ pg_version }}/{{ pg_cluster }} -U {{ pg_replication_user_name }} -v -P
+  become: true
+  become_user: "{{ pg_user }}"
+  when: "'postgresql-slave' in group_names"
+
+- name: start replication on slave from master
+  blockinfile:
+    create: yes
+    dest: "{{ pg_data_path }}/{{ pg_version }}/{{ pg_cluster }}/recovery.conf"
+    block: |
+      standby_mode = 'on'
+      primary_conninfo = 'host={{ hostvars[groups['postgresql-master'][0]]['ansible_eth0']['ipv4']['address'] }} port={{ pg_port }} user={{ pg_user }} application_name={{ ansible_hostname }}'
+      restore_command = 'cp {{ pg_data_path }}/{{ pg_version }}/{{ pg_wal_folder }}/%f %p'
+      recovery_target_timeline = 'latest'
+    owner: "{{ pg_user }}"
+    group: "{{ pg_group }}"
+    mode: 0600
+  become: true
+  when: "'postgresql-slave' in group_names"
+
+- name: start postgresql on slave host
+  service: name=postgresql state=started
+  become: true
+  when: "'postgresql-slave' in group_names"

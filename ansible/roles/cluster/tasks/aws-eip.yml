@@ -1,0 +1,16 @@
+---
+- name: create directory for aws ocf resource agents
+  file:
+    path: /usr/lib/ocf/resource.d/aws
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+  become: true
+
+- name: get ocf resource agent for aws eip
+  get_url:
+    url: https://raw.githubusercontent.com/ClusterLabs/resource-agents/master/heartbeat/awseip
+    dest: /usr/lib/ocf/resource.d/aws/ec2-eip
+    mode: 0766
+  become: true

@@ -1,0 +1,79 @@
+---
+- name: install cluster related packages
+  apt: pkg="{{ item }}" update_cache=yes
+  with_items:
+    - corosync
+    - pacemaker
+    - haveged
+  become: true
+
+- name: generate corosync key on master if it doesnt exist
+  shell: corosync-keygen
+  args:
+    creates: /etc/corosync/authkey
+  become: true
+  when: "'cluster-master' in group_names"
+
+- name: copy key from master to localhost
+  fetch:
+    src: /etc/corosync/authkey
+    dest: ./authkey
+    flat: true
+  become: true
+  when: "'cluster-master' in group_names"
+
+- name: copy corosync key to slave
+  copy:
+    src: authkey
+    dest: /etc/corosync/authkey
+    owner: root
+    group: root
+    mode: 0400
+  become: true
+  when: "'cluster-slave' in group_names"
+
+- name: delete temporary copied key from localhost
+  local_action: file path=./authkey state=absent
+
+- name: copy corosync configs to the hosts
+  template:
+    src: corosync.conf.j2
+    dest: /etc/corosync/corosync.conf
+    owner: root
+    group: root
+    mode: 0644
+  become: true
+
+- name: create directory for corosync configurations
+  file:
+    state: directory
+    path: /etc/corosync/service.d
+    owner: root
+    group: root
+    mode: 0755
+  become: true
+
+- name: enable corosync pacemaker interaction
+  copy:
+    src: pcmk
+    dest: /etc/corosync/service.d/pcmk
+    owner: root
+    group: root
+    mode: 0644
+  become: true
+
+- name: enable and restart corosync and pacemaker services
+  service:
+    name: "{{ item }}"
+    state: restarted
+    enabled: yes
+  become: true
+  with_items:
+    - corosync
+    - pacemaker
+
+- include_tasks: aws-eip.yml
+
+- include_tasks: pgsql.yml
+
+- include_tasks: configure.yml
