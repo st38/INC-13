@@ -10,6 +10,7 @@
  8. [Verification](#verification)
  9. [Recovery failed node](#recovery-failed-node)
  10. [Remove environment](#remove-environment)
+ 11. [Known issues](#known-issues)
 
 
 ## Goals
@@ -100,6 +101,7 @@
 	```bash
 	ansible cluster-master --become -a "crm_mon -Afr -1"
 	```
+	Wait while `vip` resource started and `msPostgresql` resource started as Master and Slave on nodes.
 
  2. Verify PostgreSQL replication status:
 	```bash
@@ -175,7 +177,11 @@
 	
 	# Cleanup Pacemaker cluster resource
 	sudo crm resource cleanup msPostgresql
+	
+	# Verify Pacemaker cluster status
+	sudo crm status
 	```
+
 
 ## Remove environment
 
@@ -183,5 +189,10 @@
 	```bash
 	cd ..
 	
-	bash create-environment.sh
+	bash remove-environment.sh
 	```
+
+
+## Known issues
+
+ 1. Ansible sometimes may fail and in such case you may recreate AWS environment using create-environment.sh and remove-environment.sh scripts.
