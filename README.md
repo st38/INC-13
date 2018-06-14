@@ -31,11 +31,11 @@
 ## General plan
 
  1. Create two instances.
- 2. Configure secirity group for communication.
+ 2. Configure security group for communication.
  3. Allocate AWS Elastic IP.
  4. Install and configure PostgreSQL.
  5. Install and configure Pacemaker with Corosync.
- 6. Get Packemaker ocf for AWS Elastic IP and PostgreSQL.
+ 6. Get Pacemaker ocf for AWS Elastic IP and PostgreSQL.
  7. Configure cluster.
  8. Verify results.
 
@@ -82,7 +82,7 @@
 	bash create-environment.sh
 	```
 
- 5. Load variables created by above runned script:
+ 5. Load variables created by above run script:
 	```bash
 	cd ansible
 	
@@ -113,7 +113,7 @@
 	ansible cluster-slave --become --become-user postgres -a "psql -c 'SELECT pg_last_xlog_replay_location();'"
 	```
 
- 3. Run script to monitor cluster failover:
+ 3. Run script to monitor cluster fail-over:
 	
 	Make sure that you have PostgreSQL clinet tools installed:
 	```bash
@@ -155,7 +155,7 @@
 	```
 	Now, node02 is PostgreSQL master and Elastic IP is on it.
 
- 6. Bring node01 back online:
+ 6. Bring node01 back on-line:
 	```bash
 	ansible cluster-master --become -a "crm node online node01"
 	```
