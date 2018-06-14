@@ -135,11 +135,11 @@
 	Run the following script:
 	```bash
 	while :; do
-	echo "$(date +%Y-%m-%d" "%H:%M"  "%S"   "%2N)" | grep ".*"
-	STAT="$(psql -h "$ELASTIC_IP" -U "$PG_CUSTOM_USER_NAME" -d postgres -c 'SELECT client_addr,sync_state from pg_stat_replication;' | grep "|" | grep -v "client_addr")"
-	XLOG="$(psql -h "$ELASTIC_IP" -U "$PG_CUSTOM_USER_NAME" -d postgres -c 'SELECT pg_current_xlog_location();' | grep "/" --color=never)"
-	echo "$STAT" "$XLOG"
-	sleep 1
+	  NOW="$(date +%Y-%m-%d" "%H:%M"  "%S"   "%2N)"
+	  STAT="$(psql -h "$ELASTIC_IP" -U "$PG_CUSTOM_USER_NAME" -d postgres -c 'SELECT client_addr,sync_state from pg_stat_replication;' | grep "|" | grep -v "client_addr")"
+	  XLOG="$(psql -h "$ELASTIC_IP" -U "$PG_CUSTOM_USER_NAME" -d postgres -c 'SELECT pg_current_xlog_location();' | grep "/" --color=never)"
+	  echo "$NOW" "$STAT" "$XLOG" | grep "$NOW"
+	  sleep 1
 	done
 	```
 
