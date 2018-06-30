@@ -1,5 +1,5 @@
 ---
-- name: get ltest pgsql ocf resource agent
+- name: get latest pgsql ocf resource agent
   get_url:
     url: https://raw.githubusercontent.com/ClusterLabs/resource-agents/master/heartbeat/pgsql
     dest: /usr/lib/ocf/resource.d/heartbeat/pgsql
