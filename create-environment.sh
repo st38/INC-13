@@ -40,10 +40,10 @@ aws ec2 authorize-security-group-ingress --group-id "$SG_ID" --ip-permissions '[
 aws ec2 authorize-security-group-ingress --group-id "$SG_ID" --ip-permissions '[{"IpProtocol": "tcp", "FromPort": 22, "ToPort": 22, "IpRanges": [{"CidrIp": "0.0.0.0/0", "Description": "Allow SSH from any"}]}]'
 
 # Rule - Allow Corosync from subnet a
-aws ec2 authorize-security-group-ingress --group-id "$SG_ID" --ip-permissions '[{"IpProtocol": "udp", "FromPort": '5404', "ToPort": '5406', "IpRanges": [{"CidrIp": "'${SUBNET_A}'", "Description": "Allow Corosync from subnet a"}]}]'
+aws ec2 authorize-security-group-ingress --group-id "$SG_ID" --ip-permissions '[{"IpProtocol": "udp", "FromPort": '5405', "ToPort": '5405', "IpRanges": [{"CidrIp": "'${SUBNET_A}'", "Description": "Allow Corosync from subnet a"}]}]'
 
 # Rule - Allow Corosync from subnet b
-aws ec2 authorize-security-group-ingress --group-id "$SG_ID" --ip-permissions '[{"IpProtocol": "udp", "FromPort": '5404', "ToPort": '5406', "IpRanges": [{"CidrIp": "'${SUBNET_B}'", "Description": "Allow Corosync from subnet b"}]}]'
+aws ec2 authorize-security-group-ingress --group-id "$SG_ID" --ip-permissions '[{"IpProtocol": "udp", "FromPort": '5405', "ToPort": '5405', "IpRanges": [{"CidrIp": "'${SUBNET_B}'", "Description": "Allow Corosync from subnet b"}]}]'
 
 # Rule - Allow PostgreSQL from any
 aws ec2 authorize-security-group-ingress --group-id "$SG_ID" --ip-permissions '[{"IpProtocol": "tcp", "FromPort": '5432', "ToPort": '5432', "IpRanges": [{"CidrIp": "0.0.0.0/0", "Description": "Allow PostgreSQL from any"}]}]'
